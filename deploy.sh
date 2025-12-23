@@ -1,7 +1,13 @@
 #!/bin/bash
+set -e
 
-docker stop web || true
-docker rm web || true
-docker build -t devops-basic .
-docker run -d -p 8080:80 --name web devops-basic
+IMAGE = devops-basic
+NAME = web
+PORT = 8080
+
+docker build -t $IMAGE .
+
+docker stop $NAME || true
+docker rm $NAME || true
+docker run -d -p $PORT:80 --restart unless-stopped --name $NAME $IMAGE 
 
