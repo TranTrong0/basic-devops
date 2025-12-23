@@ -1,28 +1,32 @@
-name: CI/CD Auto Deploy
+name: CI/CD Docker Hub
 
 on:
   push:
     branches: [ main ]
 
 jobs:
-  deploy:
+  build-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Setup SSH
+    - name: Login Docker Hub
       run: |
-        mkdir -p ~/.ssh
-        echo "${{ secrets.SSH_KEY }}" > ~/.ssh/id_ed25519
-        chmod 600 ~/.ssh/id_ed25519
-        ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
+        echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login \
+          -u ${{ secrets.DOCKERHUB_USER }} --password-stdin
 
-    - name: Deploy to server
+    - name: Build & Push Image
+      run: |
+        docker build -t ${{ secrets.DOCKERHUB_USER }}/devops-basic:latest .
+        docker push ${{ secrets.DOCKERHUB_USER }}/devops-basic:latest
+
+    - name: Deploy to Server
       run: |
         ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "
+          docker pull ${{ secrets.DOCKERHUB_USER }}/devops-basic:latest &&
           cd ~/basic-devops &&
-          git pull &&
-          ./deploy.sh
+          docker compose up -d
         "
+
